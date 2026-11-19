@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+env:
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,12 +24,13 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # ubuntu-latest runner 已预装 Android SDK（含 cmdline-tools），无需 setup-android。
+      # ubuntu-latest 预装 Android SDK 于 /usr/local/lib/android/sdk，sdkmanager 在 cmdline-tools/latest/bin。
       - name: Install Android SDK 36
         run: |
-          export ANDROID_HOME=$ANDROID_SDK_ROOT
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+          SDKMGR="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMGR" ]; then SDKMGR=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -1); fi
+          yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
+          "$SDKMGR" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Cache Gradle
         uses: actions/cache@v4
