@@ -16,6 +16,7 @@ data class Video(val id:String,val title:String,val cover:String="",val sourceKe
 data class Detail(val episodes:List<String>,val title:String,val description:String) {
  companion object { fun from(j:JSONObject):Detail { val a=j.getJSONArray("episodes");require(a.length()>0){"未找到播放资源"}; val info=j.getJSONObject("videoInfo"); return Detail((0 until a.length()).map{a.getString(it)},info.optString("title"),info.optString("desc")) } }
 }
+data class HotRow(val title:String,val items:List<Video>)
 data class WatchRecord(val server:String,val video:Video,val episode:Int,val position:Long,val duration:Long) {
  fun json()=JSONObject().put("server",server).put("video",video.json()).put("episode",episode).put("position",position).put("duration",duration)
  companion object { fun from(j:JSONObject)=WatchRecord(j.getString("server"),Video.from(j.getJSONObject("video")),j.getInt("episode"),j.getLong("position"),j.optLong("duration")) }

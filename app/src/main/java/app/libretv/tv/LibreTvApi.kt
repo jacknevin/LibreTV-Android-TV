@@ -33,7 +33,20 @@ class LibreTvApi(raw:String) {
   return j.getJSONArray("list").objects().map(Video::from) to (j.optJSONArray("failures")?.length()?:0)
  }
  fun detail(v:Video,sources:List<Source>):Detail { val s=sources.find{it.key==v.sourceKey}?:Source(v.sourceKey,v.sourceName,v.sourceUrl);return Detail.from(request("/api/detail?id=${encode(v.id)}&source=${encode(s.json().toString())}")) }
- fun recommended()=request("/api/hot-list?id=douban_movie_weekly").getJSONArray("items").objects().map(Video::from)
+ fun hotList(id:String):List<Video> = try {
+  request("/api/hot-list?id=${encode(id)}").optJSONArray("items")?.objects().orEmpty().map(Video::from)
+ }catch(e:Exception){emptyList()}
+ fun recommended()=hotList("douban_movie_weekly")
  fun proxy(url:String)="$base/api/proxy?url=${encode(url)}"
- companion object {fun encode(s:String)=URLEncoder.encode(s,"UTF-8")}
+ companion object {
+  fun encode(s:String)=URLEncoder.encode(s,"UTF-8")
+  val HOME_ROWS=listOf(
+   "douban_movie_weekly" to "豆瓣电影周榜",
+   "douban_tv_chinese" to "国产剧周榜",
+   "douban_tv_global" to "全球剧周榜",
+   "douban_show_chinese" to "国产综艺",
+   "douban_show_global" to "全球综艺",
+   "baidu_teleplay" to "百度热播剧"
+  )
+ }
 }

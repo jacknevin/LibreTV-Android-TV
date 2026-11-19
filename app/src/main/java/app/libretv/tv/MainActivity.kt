@@ -13,6 +13,8 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.LinearLayoutManager
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
+import java.util.concurrent.Callable
+import java.util.concurrent.TimeUnit
 
 class MainActivity:Activity() {
  internal var authDialog:android.app.Dialog?=null
@@ -31,7 +33,12 @@ class MainActivity:Activity() {
  internal val gate=RequestGate()
  internal var pending:Future<*>?=null
  internal var sources=listOf<Source>()
- internal var recommendations=listOf<Video>()
+internal var homeRows=listOf<HotRow>()
+internal var lastHomeRow=0
+internal var homeRowIndex=0
+internal val homeRowViews=mutableListOf<RecyclerView>()
+internal val rowBlocks=mutableListOf<View>()
+internal var scrollRows:ScrollView?=null
  internal var section=0
  internal var page="home"
  internal var query=""
@@ -84,9 +91,27 @@ class MainActivity:Activity() {
   remoteCard=RemoteQr(this);nav.addView(remoteCard,LinearLayout.LayoutParams(-1,d(132)).apply{topMargin=d(8)})
  }
  internal fun select(i:Int){if(!AccessGate.allowed(store.server)&&i!=4){if(authDialog==null&&!authChecking)checkService();return};section=i;when(i){0->home();1->searchScreen();2->library(true);3->library(false);4->settings()};navButtons[i].requestFocus()}
- internal fun reset(name:String){searchInput?.let{query=it.text.toString()};searchInput=null;gate.next();pending?.cancel(true);api.cancel();candidateApi?.cancel();authChecking=false;loadingHome=false;lastContent=null;page=name;content.removeAllViews();row=null;rowItems=emptyList();mainAction=null;navButtons.forEachIndexed{i,v->(v as Button).setTextColor(if(i==section)TvUi.cyan else TvUi.text);v.compoundDrawableTintList=android.content.res.ColorStateList.valueOf(if(i==section)TvUi.cyan else TvUi.text);if(!v.hasFocus())v.background=TvUi.shape(if(i==section)TvUi.surface else TvUi.bg)}}
- internal fun connect(){if(loadingHome)return;loadingHome=true;async({val configured=api.status();configured to api.recommended()},{(configured,items)->sources=configured;recommendations=items;homeLoaded=true;loadingHome=false;home(false)},{error->loadingHome=false;showError(error){connect()}})}
- internal fun loadRecommendations(){if(page!="home")return;async({api.recommended()},{recommendations=it;home(false)},{e->showError(e){loadRecommendations()}})}
+internal fun reset(name:String){searchInput?.let{query=it.text.toString()};searchInput=null;gate.next();pending?.cancel(true);api.cancel();candidateApi?.cancel();authChecking=false;loadingHome=false;lastContent=null;page=name;content.removeAllViews();row=null;rowItems=emptyList();mainAction=null;homeRowViews.clear();rowBlocks.clear();scrollRows=null;homeRowIndex=0;navButtons.forEachIndexed{i,v->(v as Button).setTextColor(if(i==section)TvUi.cyan else TvUi.text);v.compoundDrawableTintList=android.content.res.ColorStateList.valueOf(if(i==section)TvUi.cyan else TvUi.text);if(!v.hasFocus())v.background=TvUi.shape(if(i==section)TvUi.surface else TvUi.bg)}}
+internal fun connect(){if(loadingHome)return;loadingHome=true;async({val configured=api.status();configured to fetchHomeRows(api)},{(configured,rows)->sources=configured;homeRows=rows.filter{it.items.isNotEmpty()};homeLoaded=true;loadingHome=false;home(false)},{error->loadingHome=false;showError(error){connect()}})}
+internal fun reloadHomeRows(){if(page!="home")return;async({fetchHomeRows(api)},{homeRows=it.filter{r->r.items.isNotEmpty()};home(false)},{e->showError(e){reloadHomeRows()}})}
+internal fun fetchHomeRows(api:LibreTvApi):List<HotRow> {
+  val ex=Executors.newFixedThreadPool(4)
+  try {
+    val tasks=LibreTvApi.HOME_ROWS.map{(id,label)->Callable {
+      if(Thread.currentThread().isInterrupted)HotRow(label,emptyList())
+      else HotRow(label,try{api.hotList(id)}catch(e:Exception){emptyList()})
+    }}
+    val futures=ex.invokeAll(tasks,10,TimeUnit.SECONDS)
+    return futures.mapIndexed{i,f->val label=LibreTvApi.HOME_ROWS[i].second; if(f.isCancelled)HotRow(label,emptyList()) else try{f.get()}catch(e:Exception){HotRow(label,emptyList())}}
+  } finally { ex.shutdownNow() }
+}
+internal fun focusHomeRow(index:Int,position:Int?=null){
+  if(homeRows.isEmpty())return;val r=index.coerceIn(0,homeRows.lastIndex);homeRowIndex=r
+  val list=homeRowViews.getOrNull(r)?:return;val items=homeRows[r].items
+  val p=(position ?: focusMemory.index("home#$r",items.map{it.key})).coerceIn(0,(items.lastIndex).coerceAtLeast(0))
+  row=list;rowItems=items;list.scrollToPosition(p)
+  list.post{list.findViewHolderForAdapterPosition(p)?.itemView?.requestFocus();scrollRows?.smoothScrollTo(0,(rowBlocks.getOrNull(r)?.top ?: d(8))-d(8))}
+}
  internal fun <T> async(work:()->T,done:(T)->Unit,error:(String)->Unit={showError(it){select(section)}}){
   val id=gate.next();pending?.cancel(true);pending=pool.submit{try{val value=work();runOnUiThread{if(!isDestroyed&&gate.current(id))done(value)}}catch(e:Exception){if(!Thread.currentThread().isInterrupted)runOnUiThread{if(!isDestroyed&&gate.current(id))if(e is LoginRequired)loginRequired(e)else error(e.message?:"连接失败")}}}
  }

@@ -42,4 +42,4 @@ internal fun MainActivity.renderDetail(v:Video){if(!ensureAccess())return;reset(
 
 internal fun MainActivity.play(v:Video,episode:Int,position:Long){if(!ensureAccess())return;startActivityForResult(Intent(this,PlaybackActivity::class.java).putExtra("video",v.json().toString()).putExtra("server",store.server).putExtra("episode",episode).putExtra("position",position),41)}
 
-internal fun MainActivity.backFromDetail(){when(returnPage){"search"->{searchScreen();focusRow(resultPosition)};"favorites"->{library(true);focusRow()};"history"->{library(false);focusRow()};else->{home();focusRow()}}}
+internal fun MainActivity.backFromDetail(){when(returnPage){"search"->{searchScreen();focusRow(resultPosition)};"favorites"->{library(true);focusRow()};"history"->{library(false);focusRow()};else->{home();if(homeRows.isNotEmpty())focusHomeRow(lastHomeRow) else focusRow()}}}

@@ -11,7 +11,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.*
 
 internal fun MainActivity.checkService(raw:String=store.server){
- accessHandler.removeCallbacksAndMessages(null);authDialog?.dismiss();authDialog=null;AccessGate.lock();RemoteControl.lock();sources=emptyList();results=emptyList();recommendations=emptyList();homeLoaded=false
+ accessHandler.removeCallbacksAndMessages(null);authDialog?.dismiss();authDialog=null;AccessGate.lock();RemoteControl.lock();sources=emptyList();results=emptyList();homeRows=emptyList();homeLoaded=false
  reset("access");val box=pageColumn("连接影片服务")
  val status=TvUi.label(this,"正在验证服务访问权限…",18f).apply{setTextColor(TvUi.muted)};box.addView(status,LinearLayout.LayoutParams(-1,d(68)))
  val change=TvUi.button(this,"更换服务地址"){settings(raw)};box.addView(change,LinearLayout.LayoutParams(d(220),d(48)));mainAction=change;change.requestFocus()

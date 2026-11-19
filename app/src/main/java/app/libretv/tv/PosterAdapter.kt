@@ -2,7 +2,7 @@ package app.libretv.tv
 import android.view.*
 import android.widget.*
 import androidx.recyclerview.widget.RecyclerView
-class PosterAdapter(private val items:List<Video>,private val api:LibreTvApi,private val left:()->Unit,private val up:()->Unit,private val focused:(Video,Int)->Unit,private val progress:Map<String,Int>,private val click:(Video,Int)->Unit):RecyclerView.Adapter<PosterAdapter.Holder>() {
+class PosterAdapter(private val items:List<Video>,private val api:LibreTvApi,private val left:()->Unit,private val up:()->Unit,private val focused:(Video,Int)->Unit,private val progress:Map<String,Int>,private val click:(Video,Int)->Unit,private val down:()->Unit={}):RecyclerView.Adapter<PosterAdapter.Holder>() {
  class Holder(val box:LinearLayout,val pic:ImageView,val title:TextView,val progress:ProgressBar):RecyclerView.ViewHolder(box)
  override fun onCreateViewHolder(parent:ViewGroup,type:Int):Holder {
   val c=parent.context;val box=TvUi.vertical(c);box.setPadding(6,6,6,6);box.clipChildren=false
@@ -17,7 +17,7 @@ class PosterAdapter(private val items:List<Video>,private val api:LibreTvApi,pri
    key==KeyEvent.KEYCODE_DPAD_LEFT&&p==0->{left();true}
    key==KeyEvent.KEYCODE_DPAD_RIGHT&&p==items.lastIndex->true
    key==KeyEvent.KEYCODE_DPAD_UP->{up();true}
-   key==KeyEvent.KEYCODE_DPAD_DOWN->true
+   key==KeyEvent.KEYCODE_DPAD_DOWN->{down();true}
    else->false
   }}
  }
