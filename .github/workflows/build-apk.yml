@@ -20,11 +20,12 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
+      # ubuntu-latest runner 已预装 Android SDK（含 cmdline-tools），无需 setup-android。
       - name: Install Android SDK 36
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+        run: |
+          export ANDROID_HOME=$ANDROID_SDK_ROOT
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -40,9 +41,9 @@ jobs:
           chmod +x gradlew
           ./gradlew --no-daemon :app:testDebugUnitTest :app:lintDebug
 
-      # 第一版用 debug 签名，APK 可直接安装。签名稳定（CI 用仓库自带 debug.keystore
-      # 的话可原地升级），若需覆盖官方 v1.4.0 需先卸载（签名不同）。
-      # 后续可改为自有 keystore + assembleRelease，把 keystore base64 存 Secrets。
+      # 第一版用 debug 签名，APK 可直接安装。需覆盖官方 v1.4.0 时先卸载（签名不同）。
+      # 后续可改自有 keystore + assembleRelease：keystore base64 存 Secrets，
+      # 在 gradle 的 .signing/ 下还原（build.gradle.kts 已支持 .signing/signing.properties）。
       - name: Build debug APK
         run: ./gradlew --no-daemon :app:assembleDebug
 
